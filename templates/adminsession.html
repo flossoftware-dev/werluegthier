@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Welcome {{username}}</title>
+</head>
+<body>
+    <h1>Current list of connected clients:</h1>
+    <ul>
+        {% for user in users %}
+            <li>{{ user }}</li>
+        {% endfor %}
+    </ul>
+
+    <input type="hidden" name="username" value="admin">
+    <button type="submit">Display question</button>
+</body>
+<script>
+    var socket = io({
+        auth: {
+            username: "{{ username }}",
+            user_id: "{{ session['user_id'] }}"
+        }
+    });
+
+    socket.on('update_users', function(users) {
+        var ul = document.querySelector('ul');
+        ul.innerHTML = '';
+        users.forEach(function(user) {
+            var li = document.createElement('li');
+            li.textContent = user;
+            ul.appendChild(li);
+        });
+    });
+
+    function sendRedirect() {
+        socket.emit('start_sessions');
+    }
+    socket.on('redirect_event', function(url) {
+        window.location.href = url;
+    });
+</script>
+</html>

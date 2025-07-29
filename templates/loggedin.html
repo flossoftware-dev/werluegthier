@@ -5,5 +5,31 @@
 </head>
 <body>
     <h1>Your username is {{username}} </h1>
+
+    <h2>List of connected users:</h2>
+    <ul>
+        {% for user in users %}
+            <li>{{ user }}</li>
+        {% endfor %}
+    </ul>
 </body>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+    var socket = io({
+        auth: {
+            username: "{{ username }}",
+            user_id: "{{ session['user_id'] }}"
+        }
+    });
+
+    socket.on('update_users', function(users) {
+        var ul = document.querySelector('ul');
+        ul.innerHTML = '';
+        users.forEach(function(user) {
+            var li = document.createElement('li');
+            li.textContent = user;
+            ul.appendChild(li);
+        });
+    });
+</script>
 </html>
