@@ -18,8 +18,15 @@
     var socket = io({
         auth: {
             username: "{{ username }}",
-            user_id: "{{ session['user_id'] }}"
+            user_id: "{{ user_id }}"
         }
+    });
+
+    socket.on('connect', function() {
+        socket.emit('register_user', {
+            username: "{{ username }}",
+            user_id: "{{ user_id }}"
+        });
     });
 
     socket.on('update_users', function(users) {
@@ -30,6 +37,10 @@
             li.textContent = user;
             ul.appendChild(li);
         });
+    });
+
+    socket.on('apply_background_color', function(color) {
+        document.body.style.backgroundColor = color;
     });
 </script>
 </html>

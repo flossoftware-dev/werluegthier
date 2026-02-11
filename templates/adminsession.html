@@ -14,12 +14,20 @@
     <input type="hidden" name="username" value="admin">
     <button type="submit">Display question</button>
 </body>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script>
     var socket = io({
         auth: {
             username: "{{ username }}",
             user_id: "{{ session['user_id'] }}"
         }
+    });
+
+    socket.on('connect', function() {
+        socket.emit('register_user', {
+            username: "{{ username }}",
+            user_id: "{{ session['user_id'] }}"
+        });
     });
 
     socket.on('update_users', function(users) {
@@ -30,6 +38,10 @@
             li.textContent = user;
             ul.appendChild(li);
         });
+    });
+
+    socket.on('apply_background_color', function(color) {
+        document.body.style.backgroundColor = color;
     });
 
     function sendRedirect() {

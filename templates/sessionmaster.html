@@ -14,13 +14,26 @@
         <input type="hidden" name="username" value="admin">
         <button type="button" onclick="sendRedirect()">Start Session with connected users</button>    
     </form>
+    <button type="button" onclick="changeBackgroundColor('#FFB6C1')">Change to Pink</button>
+    <button type="button" onclick="changeBackgroundColor('#87CEEB')">Change to Sky Blue</button>
+    <button type="button" onclick="changeBackgroundColor('#90EE90')">Change to Light Green</button>
+    <button type="button" onclick="changeBackgroundColor('#FFFFE0')">Change to Light Yellow</button>
+    <button type="button" onclick="changeBackgroundColor('white')">Reset to White</button>
 </body>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script>
     var socket = io({
         auth: {
             username: "{{ username }}",
-            user_id: "{{ session['user_id'] }}"
+            user_id: "{{ user_id }}"
         }
+    });
+
+    socket.on('connect', function() {
+        socket.emit('register_user', {
+            username: "{{ username }}",
+            user_id: "{{ user_id }}"
+        });
     });
 
     socket.on('update_users', function(users) {
@@ -35,6 +48,9 @@
 
     function sendRedirect() {
         socket.emit('start_sessions');
+    }
+    function changeBackgroundColor(color) {
+        socket.emit('change_background_color', color);
     }
     socket.on('redirect_event', function(url) {
         window.location.href = url;

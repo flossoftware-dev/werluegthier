@@ -6,7 +6,10 @@ import uuid
 
 app = Flask(__name__, template_folder='templates')
 app.secret_key = 'development'  # Change this to a random, secret value
-socketio = SocketIO(app)
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours
+socketio = SocketIO(app, manage_session=False)
 
 connected_users = set()
 sid_to_username = {}
@@ -17,26 +20,24 @@ def do_login():
         username = request.form.get('username', '').strip()
         if not username:
             return render_template('index.html', error="Username required")
-        session['username'] = username
-        session['user_id'] = str(uuid.uuid4())  # Unique per browser session
-        connected_users.add((session['user_id'], username))
-        socketio.emit('update_users', [u[1] for u in connected_users], to='/')
+        user_id = str(uuid.uuid4())  # Unique per browser session
         if username == 'admin':
-            return redirect(url_for('display_adminpanel'))
+            return redirect(url_for('display_adminpanel', username=username, user_id=user_id))
         else:
-            return redirect(url_for('display_userpanel'))
+            return redirect(url_for('display_userpanel', username=username, user_id=user_id))
     return render_template('index.html')
 
-@app.route('/loggedin')
-def display_userpanel():
-    username = session.get('username')
-    if not username or username == 'admin':
+@app.route('/loggedin/<username>/<user_id>')
+def display_userpanel(username, user_id):
+    if username == 'admin':
         return redirect(url_for('do_login'))
-    return render_template('loggedin.html', username=username) # users=list(connected_users)
+    return render_template('loggedin.html', username=username, user_id=user_id)
 
-@app.route('/sessionmaster')
-def display_adminpanel():
-    return render_template('sessionmaster.html', username='Sessionmaster')
+@app.route('/sessionmaster/<username>/<user_id>')
+def display_adminpanel(username, user_id):
+    if username != 'admin':
+        return redirect(url_for('do_login'))
+    return render_template('sessionmaster.html', username=username, user_id=user_id)
 
 """Admin panel: Start a new session."""
 @app.route('/adminsession')
@@ -66,13 +67,18 @@ def start_sessions_windows():
     emit('redirect_event', url_for('display_adminsession'), broadcast=True)
 
 @socketio.on('connect')
-def handle_connect(auth):
-    user_id = auth.get('user_id')
-    username = auth.get('username')
+def handle_connect():
+    print(f"Client connected: {request.sid}")
+
+@socketio.on('register_user')
+def handle_register_user(data):
+    user_id = data.get('user_id')
+    username = data.get('username')
     if user_id and username:
         sid_to_username[request.sid] = (user_id, username)
         connected_users.add((user_id, username))
-        socketio.emit('update_users', [u[1] for u in connected_users])
+        print(f"User registered: {username}, Total users: {len(connected_users)}")
+        emit('update_users', sorted([u[1] for u in connected_users]), broadcast=True)
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -80,6 +86,10 @@ def handle_disconnect():
     if user_info and user_info in connected_users:
         connected_users.remove(user_info)
         socketio.emit('update_users', [u[1] for u in connected_users])
+
+@socketio.on('change_background_color')
+def handle_color_change(color):
+    emit('apply_background_color', color, broadcast=True)
 
 if __name__ == '__main__':
     socketio.run(app)
